@@ -1,0 +1,10 @@
+---
+controls:
+version: "rke2-stig-v2r3"
+id: 1
+text: "Control Plane Configuration"
+type: "controlplane"
+groups:
+  - id: 1.1
+    text: "DISA Category Code I"
+    checks:
