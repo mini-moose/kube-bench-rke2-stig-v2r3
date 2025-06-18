@@ -1,0 +1,697 @@
+---
+controls:
+version: "rke2-stig-v2r3"
+id: 1
+text: "Control Plane Security Configuration"
+type: "master"
+groups:
+  - id: 1.1
+    text: "DISA Category Code I"
+    checks:
+      - id: V-254558   # STIG CNTR-R2-000120
+        text: "The Kubernetes API server must have the insecure port flag disabled. (Automated)"
+        audit: "/bin/ps -ef | grep $apiserverbin | grep -v grep"
+        tests:
+          test_items:
+            - flag: "--insecure-port"
+              path: ""
+              set: true
+              compare:
+                op: eq
+                value: "0"
+        remediation: |
+          Edit the RKE2 Server configuration file on all RKE2 Server hosts, located at /etc/rancher/rke2/config.yaml, to contain the following:
+
+          kube-apiserver-arg:
+          - insecure-port=0
+          
+          Once configuration file is updated, restart the RKE2 Server. Run the command:
+          systemctl restart rke2-server
+        scored: true
+      - id: V-254559   # STIG CNTR-R2-000130
+        text: "[Skip if Version > 1.20] The Kubernetes Kubelet must have the read-only port flag disabled. (Automated)"
+        audit: "/bin/ps -ef | grep $kubeletbin | grep -v grep"
+        tests:
+          test_items:
+            - flag: "--read-only-port"
+              path: ""
+              set: true
+              compare:
+                op: eq
+                value: "0"
+        remediation: |
+          Edit the RKE2 Server configuration file on all RKE2 Server hosts, located at /etc/rancher/rke2/config.yaml, to contain the following:
+          
+          kubelet-arg:
+          --read-only-port=0
+
+          If configuration files are updated on a host, restart the RKE2 Service. Run the command "systemctl restart rke2-server" for server hosts and "systemctl restart rke2-agent" for agent hosts.
+        scored: true
+      - id: V-254560   # STIG CNTR-R2-000140
+        text: "The Kubernetes API server must have the insecure bind address not set. (Automated)"
+        audit: "/bin/ps -ef | grep $apiserverbin | grep -v grep"
+        tests:
+          test_items:
+            - flag: "--insecure-bind-address"
+              path: ""
+              set: true
+              compare:
+                op: noteq
+                value: "127.0.0.1"
+        remediation: |
+          If running rke2 Kubernetes version > 1.20, this requirement is NA.
+
+          Upgrade to a supported version of RKE2 Kubernetes.
+        scored: true
+        version: "<=1.20"
+      - id: V-254561   # STIG CNTR-R2-000150
+        text: "The Kubernetes kubelet must enable explicit authorization. (Automated)"
+        audit: "/bin/ps -ef | grep $kubeletbin | grep -v grep"
+        tests:
+          test_items:
+            - flag: "--authorization-mode"
+              path: ""
+              set: true
+              compare:
+                op: eq
+                value: "Webhook"
+        remediation: |
+          Edit the RKE2 Configuration File /etc/rancher/rke2/config.yaml on every RKE2 node and set the following "kubelet-arg" argument:
+
+          - authorization-mode=Webhook
+
+          Once the configuration file is updated, restart the RKE2 Server or Agent. Run the command:
+          systemctl restart rke2-server or systemctl restart rke2-agent
+        scored: true
+      - id: V-254562   # STIG CNTR-R2-000160
+        text: "The Kubernetes API server must have anonymous authentication disabled. (Automated)"
+        audit: "/bin/ps -ef | grep $apiserverbin | grep -v grep"
+        tests:
+          test_items:
+            - flag: "--anonymous-auth"
+              path: ""
+              set: true
+              compare:
+                op: eq
+                value: "false"
+        remediation: |
+          Edit the RKE2 Configuration File /etc/rancher/rke2/config.yaml on the RKE2 Control Plane and set the following "kube-apiserver-arg" argument:
+
+          - anonymous-auth=false
+
+          Once the configuration file is updated, restart the RKE2 Server. Run the command:
+          systemctl restart rke2-server
+        scored: true
+      - id: V-254553-a
+        text: "RKE2 kube-apiserver must use strong TLS settings. (Automated)"
+        audit: "/bin/ps -ef | grep $apiserverbin | grep -v grep"
+        tests:
+          test_items: # STIG requires flag CONTAIN the following items. Does not require in particular order
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384.*"
+            - flag: --tls-min-version
+              compare:
+                op: gte
+                value: "VersionTLS12"
+        remediation: |
+          Edit /etc/rancher/rke2/config.yaml to add the following under kube-apiserver-arg:
+            - "tls-min-version=VersionTLS12"
+            - "tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,..."
+          Restart RKE2 with: systemctl restart rke2-server
+        scored: true
+      - id: V-254553-b
+        text: "RKE2 kube-controller-manager must use strong TLS settings. (Automated)"
+        audit: "/bin/ps -ef | grep $controllermanagerbin | grep -v grep"
+        tests:
+          test_items: # STIG requires flag CONTAIN the following items. Does not require in particular order
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384.*"
+            - flag: --tls-min-version
+              compare:
+                op: gte
+                value: "VersionTLS12"
+        remediation: |
+          Edit /etc/rancher/rke2/config.yaml to add the following under kube-controller-manager-arg:
+            - "tls-min-version=VersionTLS12"
+            - "tls-cipher-suites=..."
+          Restart RKE2 with: systemctl restart rke2-server
+        scored: true
+      - id: V-254553-c
+        text: "RKE2 kube-scheduler must use strong TLS settings. (Automated)"
+        audit: "/bin/ps -ef | grep $schedulerbin | grep -v grep"
+        tests:
+          test_items: # STIG requires flag CONTAIN the following items. Does not require in particular order
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305.*"
+            - flag: "--tls-cipher-suites"
+              compare:
+                op: regex
+                value: ".*TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384.*"
+            - flag: --tls-min-version
+              compare:
+                op: gte
+                value: "VersionTLS12"
+        remediation: |
+          Edit /etc/rancher/rke2/config.yaml to add the following under kube-scheduler-arg:
+            - "tls-min-version=VersionTLS12"
+            - "tls-cipher-suites=..."
+          Restart RKE2 with: systemctl restart rke2-server
+        scored: true
+      - id: V-254573   # STIG CNTR-R2-001500
+        text: "[Skip if Version >= 1.20] Rancher RKE2 keystore must implement encryption to prevent unauthorized disclosure of information at rest within Rancher RKE2. (Automated)"
+        audit: "/bin/cat /etc/rancher/rke2/config.yaml"
+        audit_config: "/etc/rancher/rke2/config.yaml"
+        tests:
+          test_items:
+            - path: secrets-encryption
+              set: true
+              compare:
+                op: noteq
+                value: false
+        remediation: |
+          This is Not Applicable for RKE2 versions 1.20 and greater.
+
+          Enable secrets encryption.
+
+          Edit the RKE2 configuration file on all RKE2 servers, located at /etc/rancher/rke2/config.yaml, so that it contains:
+
+          secrets-encryption: true
+        scored: true
+        version: "<=1.20"
+  - id: 1.2
+    text: "DISA Category Code II"
+    checks:
+      - id: V-254556   # STIG CNTR-R2-000100
+        text: "The Kubernetes Controller Manager must have secure binding. (Automated)"
+        audit: "/bin/ps -ef | grep $controllermanagerbin | grep -v grep"
+        tests:
+          test_items:
+            - flag: "--bind-address"
+              path: ""
+              set: true
+              compare:
+                op: eq
+                value: "127.0.0.1"
+        remediation: |
+          Edit the RKE2 Configuration File /etc/rancher/rke2/config.yaml on the RKE2 Control Plane and set the following "kube-controller-manager-arg" argument:
+          - bind-address=127.0.0.1
+
+          Once the configuration file is updated, restart the RKE2 Server. Run the command:
+          systemctl restart rke2-server
+        scored: true
+      - id: V-254557   # STIG CNTR-R2-000110
+        text: "The Kubernetes Kubelet must have anonymous authentication disabled. (Automated)"
+        audit: "/bin/ps -ef | grep $kubeletbin | grep -v grep"
+        tests:
+          test_items:
+            - flag: "--anonymous-auth"
+              path: ""
+              set: true
+              compare:
+                op: noteq
+                value: "true"
+        remediation: |
+          Edit the Kubernetes Kubelet file etc/rancher/rke2/config.yaml on the RKE2 Control Plane and set the following:
+          --anonymous-auth=false
+
+          Once configuration file is updated, restart the RKE2 Agent. Run the command:
+          systemctl restart rke2-server
+        scored: true
+      - id: V-254563   # STIG CNTR-R2-000320
+        text: "All audit records must identify any containers associated with the event within Rancher RKE2. (Automated)"
+        audit: "/bin/ps -ef | grep $apiserverbin | grep -v grep"
+        tests:
+          test_items:
+            - flag: "--audit-log-maxage"
+              path: ""
+              set: true
+              compare:
+                op: gte
+                value: 30
+        remediation: |
+          Edit the Kubernetes Kubelet file etc/rancher/rke2/config.yaml on the RKE2 Control Plane and set the following:
+          --anonymous-auth=false
+
+          Once configuration file is updated, restart the RKE2 Agent. Run the command:
+          systemctl restart rke2-server
+        scored: true
+      - id: V-254565   # STIG CNTR-R2-000550
+        text: "Rancher RKE2 must be configured with only essential configurations. (Manual)"
+        type: "manual"
+        remediation: |
+          Disable unnecessary RKE2 components.
+
+          Edit the RKE2 Server configuration file on all RKE2 Server hosts, located at /etc/rancher/rke2/config.yaml, so that it contains a "disable" flag if any default RKE2 components are unnecessary. 
+
+          Example:
+          disable: rke2-canal
+          disable: rke2-coredns
+          disable: rke2-ingress-nginx
+          disable: rke2-kube-proxy
+          disable: rke2-metrics-server
+
+          Once the configuration file is updated, restart the RKE2 Server. Run the command:
+          systemctl restart rke2-server
+        scored: false
+      - id: V-254571   # STIG CNTR-R2-001130
+        text: "Rancher RKE2 must prevent nonprivileged users from executing privileged functions to include disabling, circumventing, or altering implemented security safeguards/countermeasures. (Automated)"
+        audit_config: "/etc/rancher/rke2/rke2-pss.yaml"
+        tests:
+          test_items:
+            # For RKE2 >= 1.25
+            - path: defaults.audit
+              compare:
+                op: eq
+                value: restricted
+            - path: defaults.audit-version
+              compare:
+                op: eq
+                value: latest
+            - path: defaults.enforce
+              compare:
+                op: eq
+                value: restricted
+            - path: defaults.enforce-version
+              compare:
+                op: eq
+                value: latest
+            - path: defaults.warn
+              compare:
+                op: eq
+                value: restricted
+            - path: defaults.warn-version
+              compare:
+                op: eq
+                value: latest
+        remediation: |
+          On each Control Plane node, create the file "/etc/rancher/rke2/rke2-pss.yaml" and add the following content:
+
+          apiVersion: apiserver.config.k8s.io/v1
+          kind: AdmissionConfiguration
+          plugins:
+          - name: PodSecurity
+            configuration:
+              apiVersion: pod-security.admission.config.k8s.io/v1beta1
+              kind: PodSecurityConfiguration
+              defaults:
+                enforce: "restricted"
+                enforce-version: "latest"
+                audit: "restricted"
+                audit-version: "latest"
+                warn: "restricted"
+                warn-version: "latest"
+              exemptions:
+                usernames: []
+                runtimeClasses: []
+                namespaces: [kube-system, cis-operator-system, tigera-operator]
+
+          Ensure the namespace exemptions contain only namespaces requiring access to capabilities outside of the restricted settings above.
+
+          Once the file is created, restart the Control Plane nodes with:
+
+          systemctl restart rke2-server
+        scored: true
+        version: ">=1.24"
+      - id: V-254574   # STIG CNTR-R2-001580
+        text: "Rancher RKE2 must remove old components after updated versions have been installed. (Manual)"
+        type: "manual"
+        remediation: |
+          Remove any old pods that are using older images. On the RKE2 Control Plane, run the command:
+
+          kubectl delete pod podname
+          (Note: "podname" is the name of the pod to delete.)
+
+          Run the command:
+          systemctl restart rke2-server
+        scored: false
+      - id: V-254575   # STIG CNTR-R2-001620
+        text: "Rancher RKE2 registry must contain the latest images with most recent updates and execute within Rancher RKE2 runtime as authorized by IAVM, CTOs, DTMs, and STIGs. (Manual)"
+        type: "manual"
+        remediation: |
+          Upgrade RKE2 to the supported version. Institute and adhere to the policies and procedures to ensure that patches are consistently applied within the time allowed.
+        scored: false
+      - id: V-254554   # STIG CNTR-R2-000030
+        text: "RKE2 must use a centralized user management solution to support account management functions. (Automated)"
+        audit: "/bin/ps -ef | grep $controllermanagerbin | grep -v grep"
+        tests:
+          test_items:
+            - flag: "--use-service-account-credentials"
+              path: ""
+              set: true
+              compare:
+                op: eq
+                value: "true"
+        remediation: |
+          Edit the RKE2 Configuration File /etc/rancher/rke2/config.yaml on the RKE2 Control Plane and set the following "kube-controller-manager-arg" argument:
+          - use-service-account-credentials=true
+
+          Once the configuration file is updated, restart the RKE2 Server. Run the command:
+          systemctl restart rke2-server
+        scored: true
+      - id: V-254554-a   # STIG CNTR-R2-000030
+        text: "Rancher RKE2 components must be configured in accordance with the security configuration settings based on DOD security configuration or implementation guidance, including SRGs, STIGs, NSA configuration guides, CTOs, and DTMs. (Automated)"
+        audit: "/bin/ps -ef | grep $apiserverbin | grep -v grep"
+        tests:
+          test_items:
+            - flag: "--audit-policy-file"
+              path: ""
+              set: true
+            - flag: "--audit-log-mode"
+              path: ""
+              set: true
+              compare:
+                op: eq
+                value: "blocking-strict"
+        remediation: |
+          Edit the RKE2 Server configuration file on all RKE2 Server hosts, located at /etc/rancher/rke2/config.yaml, so that it contains required configuration.
+
+          --audit-policy-file= Path to the file that defines the audit policy configuration. (Example: /etc/rancher/rke2/audit-policy.yaml)
+          --audit-log-mode=blocking-strict
+
+          If configuration file is updated, restart the RKE2 Server. Run the command:
+          systemctl restart rke2-server
+        scored: true
+      - id: V-254554-b   # STIG CNTR-R2-000030
+        text: "Rancher RKE2 components must be configured in accordance with the security configuration settings based on DOD security configuration or implementation guidance, including SRGs, STIGs, NSA configuration guides, CTOs, and DTMs. (Automated)"
+        audit_config: "/etc/rancher/rke2/config.yaml"
+        tests:
+          test_items:
+            # For RKE2 >= 1.25
+            - path: "profile"
+              compare:
+                op: eq
+                value: "cis"
+        remediation: |
+          Edit the RKE2 Server configuration file on all RKE2 Server hosts, located at /etc/rancher/rke2/config.yaml, so that it contains required configuration.
+
+          profile:cis
+
+          If configuration file is updated, restart the RKE2 Server. Run the command:
+          systemctl restart rke2-server
+        scored: true
+      - id: V-254554-c   # STIG CNTR-R2-000030
+        text: "Rancher RKE2 components must be configured in accordance with the security configuration settings based on DOD security configuration or implementation guidance, including SRGs, STIGs, NSA configuration guides, CTOs, and DTMs. (Automated)"
+        audit_config: "/etc/rancher/rke2/audit-policy.yaml"
+        tests:
+          test_items:
+            - path: ".apiVersion"
+              compare:
+                op: eq
+                value: "audit.k8s.io/v1"
+            - path: ".kind"
+              compare:
+                op: eq
+                value: "Policy"
+            - path: ".metadata.name"
+              compare:
+                op: eq
+                value: "rke2-audit-policy"
+            - path: ".rules[0].level"
+              compare:
+                op: eq
+                value: "Metadata"
+            - path: ".rules[0].resources[0].group"
+              compare:
+                op: eq
+                value: ""
+            - path: ".rules[0].resources[0].resources[0]"
+              compare:
+                op: eq
+                value: "secrets"
+            - path: ".rules[1].level"
+              compare:
+                op: eq
+                value: "RequestResponse"
+            - path: ".rules[1].resources[0].group"
+              compare:
+                op: eq
+                value: ""
+            - path: ".rules[1].resources[0].resources[0]"
+              compare:
+                op: eq
+                value: "*"
+        remediation: |
+          Edit the RKE2 Server configuration file on all RKE2 Server hosts, located at /etc/rancher/rke2/config.yaml, so that it contains required configuration.
+
+          profile:cis
+
+          If configuration file is updated, restart the RKE2 Server. Run the command:
+          systemctl restart rke2-server
+        scored: true
+      - id: V-254564   # STIG CNTR-R2-000520
+        text: "Configuration and authentication files for Rancher RKE2 must be protected. (Manual)"
+        type: "manual"
+        remediation: |
+          File system permissions:
+          1. Fix permissions of the files in /etc/rancher/rke2:
+          cd /etc/rancher/rke2
+          chmod 0600 ./*
+          chown root:root ./*
+          ls -l
+
+          2. Fix permissions of the files in /var/lib/rancher/rke2:
+          cd /var/lib/rancher/rke2
+          chown root:root ./*
+          ls -l
+
+          3. Fix permissions of the files and directories in /var/lib/rancher/rke2/agent:
+          cd /var/lib/rancher/rke2/agent
+          chown root:root ./*
+          chmod 0700 pod-manifests
+          chmod 0700 etc
+          find . -maxdepth 1 -type f -name "*.kubeconfig" -exec chmod 0640 {} \;
+          find . -maxdepth 1 -type f -name "*.crt" -exec chmod 0600 {} \;
+          find . -maxdepth 1 -type f -name "*.key" -exec chmod 0600 {} \;
+          ls -l
+
+          4. Fix permissions of the files in /var/lib/rancher/rke2/bin:
+          cd /var/lib/rancher/rke2/agent/bin
+          chown root:root ./*
+          chmod 0750 ./*
+          ls -l
+
+          5. Fix permissions directory of /var/lib/rancher/rke2/data:
+          cd /var/lib/rancher/rke2/agent
+          chown root:root data
+          chmod 0750 data
+          ls -l
+
+          6. Fix permissions of files in /var/lib/rancher/rke2/data:
+          cd /var/lib/rancher/rke2/data
+          chown root:root ./*
+          chmod 0640 ./*
+          ls -l
+
+          7. Fix permissions in /var/lib/rancher/rke2/server:
+          cd /var/lib/rancher/rke2/server
+          chown root:root ./*
+          chmod 0700 cred
+          chmod 0700 db
+          chmod 0700 tls
+          chmod 0750 manifests
+          chmod 0750 logs
+          chmod 0600 token
+          ls -l
+
+          Edit the RKE2 Server configuration file on all RKE2 Server hosts, located at /etc/rancher/rke2/config.yaml, to contain the following:
+
+          write-kubeconfig-mode: "0600"
+
+          Once the configuration file is updated, restart the RKE2 Server. Run the command:
+          systemctl restart rke2-server
+        scored: false
+      - id: V-254566   # STIG CNTR-R2-000580
+        text: "Rancher RKE2 runtime must enforce ports, protocols, and services that adhere to the PPSM CAL. (Manual)"
+        type: "manual"
+        remediation: |
+          Run the command:
+            grep kube-apiserver.yaml -I -insecure-port
+            grep kube-apiserver.yaml -I -secure-port
+            grep kube-apiserver.yaml -I -etcd-servers *
+
+            Review findings against the most recent PPSM CAL:
+            https://cyber.mil/ppsm/cal/
+          Review system documentation and ensure all ports, protocols, and services are properly documented and approved by the ISSO.
+        scored: false
+      - id: V-254567   # STIG CNTR-R2-000800
+        text: "Rancher RKE2 must store only cryptographic representations of passwords. (Manual)"
+        type: "manual"
+        remediation: |
+          On the RKE2 Control Plane, run the following commands:
+
+          kubectl get pods -A
+          kubectl get jobs -A
+          kubectl get cronjobs -A
+
+          This will output all running pods, jobs, and cronjobs. 
+
+          Evaluate each of the above commands using the respective commands below:
+
+          kubectl get pod -n <namespace> <pod> -o yaml
+          kubectl get job -n <namespace> <job> -o yaml
+          kubectl get cronjob -n <namespace> <cronjob> -o yaml
+
+          If any contain sensitive values as environment variables, this is a finding.
+        scored: false
+      - id: V-254567   # STIG CNTR-R2-000800
+        text: "Rancher RKE2 must store only cryptographic representations of passwords. (Manual)"
+        type: "manual"
+        remediation: |
+          On the RKE2 Control Plane, run the following commands:
+
+          kubectl get pods -A
+          kubectl get jobs -A
+          kubectl get cronjobs -A
+
+          This will output all running pods, jobs, and cronjobs. 
+
+          Evaluate each of the above commands using the respective commands below:
+
+          kubectl get pod -n <namespace> <pod> -o yaml
+          kubectl get job -n <namespace> <job> -o yaml
+          kubectl get cronjob -n <namespace> <cronjob> -o yaml
+
+          If any contain sensitive values as environment variables, this is a finding.
+        scored: false
+      - id: V-254568   # STIG CNTR-R2-000890
+        text: "Rancher RKE2 must terminate all network connections associated with a communications session at the end of the session, or as follows: for in-band management sessions (privileged sessions), the session must be terminated after five minutes of inactivity. (Automated)"
+        audit: "/bin/ps -ef | grep $kubeletbin | grep -v grep"
+        tests:
+          test_items:
+            - flag: "--streaming-connection-idle-timeout"
+              path: ""
+              set: true
+              compare:
+                op: gte
+                value: "5m"
+        remediation: |
+          Edit the RKE2 Server configuration file on all RKE2 Agent hosts, located at /etc/rancher/rke2/config.yaml, to contain the following:
+
+          kubelet-arg:
+          - streaming-connection-idle-timeout=5m
+
+          If configuration files are updated on a host, restart the RKE2 Service. 
+          Run the command "systemctl restart rke2-server" for server hosts and "systemctl restart rke2-agent" for agent hosts.
+        scored: true
+      - id: V-254569   # STIG CNTR-R2-000940
+        text: "Rancher RKE2 runtime must isolate security functions from nonsecurity functions. (Automated)"
+        audit: "/bin/ps -ef | grep $kubeletbin | grep -v grep"
+        tests:
+          test_items:
+            - flag: "--protect-kernel-defaults"
+              path: ""
+              set: true
+              compare:
+                op: eq
+                value: "true"
+        remediation: |
+          Edit the RKE2 Server configuration file on all RKE2 Server hosts, located at /etc/rancher/rke2/config.yaml, to contain the following:
+
+          kubelet-arg:
+          --protect-kernel-defaults=true
+
+          If configuration files are updated on a host, restart the RKE2 Service. 
+          Run the command "systemctl restart rke2-server" for server hosts and "systemctl restart rke2-agent" for agent hosts.
+        scored: true
+      - id: V-254570   # STIG CNTR-R2-000970
+        text: "Rancher RKE2 runtime must maintain separate execution domains for each container by assigning each container a separate address space to prevent unauthorized and unintended information transfer via shared system resources. (Manual)"
+        type: "manual"
+        remediation: |
+          System namespaces are reserved and isolated.
+
+          A resource cannot move to a new namespace; the resource must be deleted and recreated in the new namespace.
+
+          kubectl delete <resource_type> <resource_name>
+          kubectl create -f <resource.yaml> --namespace=<user_created_namespace>
+        scored: false
+      - id: V-254572   # STIG CNTR-R2-001270
+        text: "RKE2 kube-apiserver must use strong TLS settings. (Automated)"
+        audit: "/bin/ps -ef | grep $apiserverbin | grep -v grep"
+        tests:
+          test_items: # STIG requires flag CONTAIN the following items. Does not require in particular order
+            - flag: "--authorization-mode"
+              compare:
+                op: eq
+                value: "RBAC,Node"
+        remediation: |
+          Edit the RKE2 Server configuration file on all RKE2 Control Plane hosts, located at /etc/rancher/rke2/config.yaml, to contain the following:
+
+          kube-apiserver-arg:
+          --authorization-mode=RBAC,Node
+
+          Once configuration file is updated, restart the RKE2 Server. Run the command:
+          systemctl restart rke2-server
+        scored: true
+      - id: V-268321   # STIG CNTR-R2-000460
+        text: "Only RKE2 images that have been properly signed by Rancher Government's authorized key will be deployed to ensure the cluster's security and compliance with organizational policies. (Manual)"
+        type: "manual"
+        remediation: |
+          Immediate action must be taken to remove non-verifiable images from the cluster and replace them with verifiable images. 
+
+          Utilize Hauler (https://hauler.dev) to pull and verify RKE2 images from Rancher Government Solutions Carbide Repository.
+
+          For more information about pulling Carbide images and their signatures, including RKE2, see: 
+          https://rancherfederal.github.io/carbide-docs/docs/registry-docs/downloading-images
+        scored: false
